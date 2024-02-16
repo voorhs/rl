@@ -1,5 +1,7 @@
 import numpy as np
+from gymnasium import Env
 from .utils import show_progress
+from .agent import Agent
 
 
 def select_elites(states_batch, actions_batch, rewards_batch, percentile=50):
@@ -29,7 +31,7 @@ def select_elites(states_batch, actions_batch, rewards_batch, percentile=50):
     return elite_states, elite_actions
 
 
-def train(n_iter, n_sessions, percentile, env, agent, generate_session):
+def train(n_iter, n_sessions, percentile, env: Env, agent: Agent, generate_session):
     log = []
     for i in range(n_iter):
         states_batch, actions_batch, rewards_batch = [], [], []
@@ -41,7 +43,7 @@ def train(n_iter, n_sessions, percentile, env, agent, generate_session):
 
         elite_states, elite_actions = select_elites(states_batch, actions_batch, rewards_batch, percentile)
 
-        agent.partial_fit(elite_states, elite_actions)
+        agent.update(elite_states, elite_actions)
 
         show_progress(
             rewards_batch, log, percentile, reward_range=[0, np.max(rewards_batch)]
