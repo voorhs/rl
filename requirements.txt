@@ -1,0 +1,4 @@
+matplotlib
+numpy
+gymnasium[toy_text,classic_control]
+scikit-learn
