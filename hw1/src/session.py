@@ -1,9 +1,9 @@
 from gymnasium import Env
-from sklearn.neural_network import MLPClassifier
+from .agent import Agent
 import numpy as np
 
 
-def generate_session(env: Env, agent: MLPClassifier, t_max=1000):
+def generate_session(env: Env, agent: Agent, t_max=1000):
     """
     Play a single game using agent neural network.
     Terminate when game finishes or after :t_max: steps
@@ -17,7 +17,7 @@ def generate_session(env: Env, agent: MLPClassifier, t_max=1000):
     for t in range(t_max):
 
         # use agent to predict a vector of action probabilities for state :s:
-        probs = agent.predict_proba([s]).flatten()
+        probs = agent.predict([s]).flatten()
 
         assert probs.shape == (n_actions,), "make sure probabilities are a vector (hint: np.reshape)"
 
