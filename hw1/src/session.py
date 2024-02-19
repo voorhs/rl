@@ -40,7 +40,9 @@ def session(i, env: Env, agent: Agent, t_max=1000):
     return states, actions, total_reward
 
 
-def generate_sessions(n_sessions, env: Env, agent: Agent, t_max=1000):
+def generate_sessions(n_sessions, env: Env, agent: Agent, mp=True, t_max=1000):
     func = partial(session, env=env, agent=agent, t_max=t_max)
-    pool = Pool(processes=4)
-    return pool.map(func, list(range(n_sessions)))
+    if mp:
+        pool = Pool(processes=4)
+        return pool.map(func, list(range(n_sessions)))
+    return map(func, list(range(n_sessions)))

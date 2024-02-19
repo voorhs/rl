@@ -1,3 +1,5 @@
+import itertools as it
+from collections import deque
 import numpy as np
 from gymnasium import Env
 from .utils import show_progress
@@ -31,8 +33,9 @@ def select_elites(states_batch, actions_batch, rewards_batch, percentile=50):
     return elite_states, elite_actions
 
 
-def train(n_iter, n_sessions, percentile, env: Env, agent: Agent, generate_sessions, mean_reward_to_win=None):
+def train(n_iter, n_sessions, percentile, env: Env, agent: Agent, generate_sessions, n_batches_reuse, mean_reward_to_win=None):
     log = []
+    elite_states, elite_actions = deque(maxlen=n_batches_reuse), deque(maxlen=n_batches_reuse)
     for i in range(n_iter):
         states_batch, actions_batch, rewards_batch = [], [], []
         sessions = generate_sessions(n_sessions, env, agent)
@@ -41,9 +44,14 @@ def train(n_iter, n_sessions, percentile, env: Env, agent: Agent, generate_sessi
             actions_batch.append(actions)
             rewards_batch.append(total_reward)
 
-        elite_states, elite_actions = select_elites(states_batch, actions_batch, rewards_batch, percentile)
+        elite_states_batch, elite_actions_batch = select_elites(states_batch, actions_batch, rewards_batch, percentile)
+        elite_states.append(elite_states_batch)
+        elite_actions.append(elite_actions_batch)
 
-        agent.update(elite_states, elite_actions)
+        agent.update(
+            list(it.chain.from_iterable(elite_states)),
+            list(it.chain.from_iterable(elite_actions))
+        )
 
         if mean_reward_to_win is not None:
             show_progress(rewards_batch, log, percentile, reward_range=[0, np.max(rewards_batch)])

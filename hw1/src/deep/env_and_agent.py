@@ -7,11 +7,8 @@ from ..agent import Agent
 
 
 class DeepCEAgent(Agent):
-    def __init__(self, action_space, state_space):
-        self.model = MLPClassifier(
-            hidden_layer_sizes=(20, 20),
-            activation="tanh",
-        )
+    def __init__(self, network: MLPClassifier, action_space, state_space):
+        self.model = network
         self.action_space = action_space
         self.state_space = state_space
         
@@ -54,11 +51,11 @@ class DeepCEAgent(Agent):
         return inputs
             
 
-def get_env_and_agent(env_name):
+def get_env_and_agent(env_name, network: MLPClassifier):
     env: Env = gym.make(env_name, render_mode="rgb_array").env
 
     env.reset()
 
-    agent = DeepCEAgent(env.action_space, env.observation_space)
+    agent = DeepCEAgent(network, env.action_space, env.observation_space)
 
     return env, agent
