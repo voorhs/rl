@@ -31,7 +31,7 @@ def select_elites(states_batch, actions_batch, rewards_batch, percentile=50):
     return elite_states, elite_actions
 
 
-def train(n_iter, n_sessions, percentile, env: Env, agent: Agent, generate_session):
+def train(n_iter, n_sessions, percentile, env: Env, agent: Agent, generate_session, mean_reward_to_win):
     log = []
     for i in range(n_iter):
         states_batch, actions_batch, rewards_batch = [], [], []
@@ -45,9 +45,7 @@ def train(n_iter, n_sessions, percentile, env: Env, agent: Agent, generate_sessi
 
         agent.update(elite_states, elite_actions)
 
-        show_progress(
-            rewards_batch, log, percentile, reward_range=[0, np.max(rewards_batch)]
-        )
+        show_progress(rewards_batch, log, percentile, reward_range=[0, np.max(rewards_batch)])
 
-        if np.mean(rewards_batch) > 190:
+        if np.mean(rewards_batch) > mean_reward_to_win:
             print("You Win! You may stop training now via KeyboardInterrupt.")

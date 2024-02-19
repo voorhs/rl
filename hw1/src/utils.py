@@ -25,7 +25,7 @@ def show_progress(rewards_batch, log, percentile, reward_range=[-990, +10]):
     plt.xlabel('iterations')
 
     plt.subplot(1, 2, 2)
-    plt.hist(rewards_batch, range=reward_range)
+    plt.hist(rewards_batch)#, range=reward_range)
     plt.vlines(
         [np.percentile(rewards_batch, percentile)],
         [0],
