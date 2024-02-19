@@ -31,12 +31,12 @@ def select_elites(states_batch, actions_batch, rewards_batch, percentile=50):
     return elite_states, elite_actions
 
 
-def train(n_iter, n_sessions, percentile, env: Env, agent: Agent, generate_session, mean_reward_to_win):
+def train(n_iter, n_sessions, percentile, env: Env, agent: Agent, generate_sessions, mean_reward_to_win=None):
     log = []
     for i in range(n_iter):
         states_batch, actions_batch, rewards_batch = [], [], []
-        for _ in range(n_sessions):
-            states, actions, total_reward = generate_session(env, agent)
+        sessions = generate_sessions(n_sessions, env, agent)
+        for states, actions, total_reward in sessions:
             states_batch.append(states)
             actions_batch.append(actions)
             rewards_batch.append(total_reward)
@@ -45,7 +45,15 @@ def train(n_iter, n_sessions, percentile, env: Env, agent: Agent, generate_sessi
 
         agent.update(elite_states, elite_actions)
 
-        show_progress(rewards_batch, log, percentile, reward_range=[0, np.max(rewards_batch)])
+        if mean_reward_to_win is not None:
+            show_progress(rewards_batch, log, percentile, reward_range=[0, np.max(rewards_batch)])
 
-        if np.mean(rewards_batch) > mean_reward_to_win:
-            print("You Win! You may stop training now via KeyboardInterrupt.")
+            if np.mean(rewards_batch) > mean_reward_to_win:
+                print("You Win! You may stop training now via KeyboardInterrupt.")
+        else:
+            mean_reward = np.mean(rewards_batch)
+            threshold = np.percentile(rewards_batch, percentile)
+            log.append([mean_reward, threshold])
+            
+    if mean_reward_to_win is None:
+        return max(log, key=lambda x: x[0]) # return best mean reward reached

@@ -1,9 +1,11 @@
+from multiprocessing import Pool
+from functools import partial
+import numpy as np
 from gymnasium import Env
 from .agent import Agent
-import numpy as np
 
 
-def generate_session(env: Env, agent: Agent, t_max=1000):
+def session(i, env: Env, agent: Agent, t_max=1000):
     """
     Play a single game using agent neural network.
     Terminate when game finishes or after :t_max: steps
@@ -36,3 +38,9 @@ def generate_session(env: Env, agent: Agent, t_max=1000):
         if terminated or truncated:
             break
     return states, actions, total_reward
+
+
+def generate_sessions(n_sessions, env: Env, agent: Agent, t_max=1000):
+    func = partial(session, env=env, agent=agent, t_max=t_max)
+    pool = Pool(processes=4)
+    return pool.map(func, list(range(n_sessions)))
