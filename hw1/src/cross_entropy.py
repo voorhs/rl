@@ -6,7 +6,7 @@ from .utils import show_progress
 from .agent import Agent
 
 
-def select_elites(states_batch, actions_batch, rewards_batch, percentile=50):
+def select_percentile(states_batch, actions_batch, rewards_batch, percentile=50):
     """
     Select states and actions from games that have rewards >= percentile
     :param states_batch: list of lists of states, states_batch[session_i][t]
@@ -33,18 +33,41 @@ def select_elites(states_batch, actions_batch, rewards_batch, percentile=50):
     return elite_states, elite_actions
 
 
-def train(n_iter, n_sessions, percentile, env: Env, agent: Agent, generate_sessions, n_batches_reuse, mean_reward_to_win=None):
+def select_topk(states_batch, actions_batch, rewards_batch, topk):
+    indexes = np.argsort(rewards_batch)[-topk:]
+    
+    elite_states, elite_actions = [], []
+    for i in indexes:
+        elite_states.extend(states_batch[i])
+        elite_actions.extend(actions_batch[i])
+    return elite_states, elite_actions
+
+
+def train(n_iter, n_sessions, percentile, env_name, agent: Agent, generate_sessions, n_batches_reuse, mean_reward_to_win=None, topk=None):
     log = []
     elite_states, elite_actions = deque(maxlen=n_batches_reuse), deque(maxlen=n_batches_reuse)
     for i in range(n_iter):
         states_batch, actions_batch, rewards_batch = [], [], []
-        sessions = generate_sessions(n_sessions, env, agent)
+        if isinstance(n_sessions, list):
+            n = n_sessions[min(i, len(n_sessions)-1)]
+        else:
+            n = n_sessions
+        sessions = generate_sessions(n, env_name, agent)
         for states, actions, total_reward in sessions:
             states_batch.append(states)
             actions_batch.append(actions)
             rewards_batch.append(total_reward)
 
-        elite_states_batch, elite_actions_batch = select_elites(states_batch, actions_batch, rewards_batch, percentile)
+        if topk is not None:
+            elite_states_batch, elite_actions_batch = select_topk(states_batch, actions_batch, rewards_batch, topk)
+        elif percentile is not None:
+            elite_states_batch, elite_actions_batch = select_percentile(states_batch, actions_batch, rewards_batch, percentile)
+        else:
+            raise ValueError('specify either percentile or topk argument')
+
+        if not elite_actions_batch:
+            print('no elite batches found on iter', i)
+            continue
         elite_states.append(elite_states_batch)
         elite_actions.append(elite_actions_batch)
 

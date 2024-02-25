@@ -1,16 +1,26 @@
 from multiprocessing import Pool
 from functools import partial
 import numpy as np
+import gymnasium as gym
 from gymnasium import Env
+from gymnasium.spaces import Discrete
+from joblib import Parallel, delayed
 from .agent import Agent
 
 
-def session(i, env: Env, agent: Agent, t_max=1000):
+def session(i, env_name, agent: Agent, sigma=None, t_max=1000):
     """
     Play a single game using agent neural network.
     Terminate when game finishes or after :t_max: steps
     """
-    n_actions = env.action_space.n
+    env: Env = gym.make(env_name, render_mode="rgb_array").env
+
+    action_discrete = isinstance(env.action_space, Discrete)
+    if action_discrete:
+        n_actions = env.action_space.n
+    else:
+        n_actions = env.action_space.shape[0]
+    
     states, actions = [], []
     total_reward = 0
 
@@ -25,7 +35,10 @@ def session(i, env: Env, agent: Agent, t_max=1000):
 
         # use the probabilities you predicted to pick an action
         # sample proportionally to the probabilities, don't just take the most likely action
-        a = np.random.choice(n_actions, p=probs)
+        if not action_discrete:
+            a = probs + np.random.normal(scale=sigma) 
+        else:
+            a = np.random.choice(n_actions, p=probs)
 
         new_s, r, terminated, truncated, _ = env.step(a)
 
@@ -40,9 +53,8 @@ def session(i, env: Env, agent: Agent, t_max=1000):
     return states, actions, total_reward
 
 
-def generate_sessions(n_sessions, env: Env, agent: Agent, mp=True, t_max=1000):
-    func = partial(session, env=env, agent=agent, t_max=t_max)
+def generate_sessions(n_sessions, env_name, agent: Agent, sigma=None, mp=True, t_max=1000):
+    func = partial(session, env_name=env_name, agent=agent, t_max=t_max, sigma=sigma)
     if mp:
-        pool = Pool(processes=4)
-        return pool.map(func, list(range(n_sessions)))
+        return Parallel(n_jobs=4)(delayed(func)(i) for i in range(n_sessions))
     return map(func, list(range(n_sessions)))
