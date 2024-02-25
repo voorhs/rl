@@ -57,7 +57,7 @@ def train(n_iter, n_sessions, percentile, env: Env, agent: Agent, generate_sessi
             show_progress(rewards_batch, log, percentile, reward_range=[0, np.max(rewards_batch)])
 
             if np.mean(rewards_batch) > mean_reward_to_win:
-                print("You Win! You may stop training now via KeyboardInterrupt.")
+                return 'success'
         else:
             mean_reward = np.mean(rewards_batch)
             threshold = np.percentile(rewards_batch, percentile)
