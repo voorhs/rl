@@ -7,7 +7,7 @@ import numpy as np
 import gym
 import gym.spaces as spaces
 from ale_py.env.gym import AtariEnv
-from tensorboardX import SummaryWriter
+from torch.utils.tensorboard import SummaryWriter
 
 from env_batch import ParallelEnvBatch
 cv2.ocl.setUseOpenCL(False)
@@ -321,7 +321,7 @@ class _thunk:
     def __call__(self):
         return nature_dqn_env(self.env_id, seed=self.env_seed, summaries=False, clip_reward=False, **self.kwargs)
 
-def nature_dqn_env(env_id, nenvs=None, seed=None, summaries=True, monitor=False, clip_reward=True, episodic_life=True, video=False):
+def nature_dqn_env(env_id, nenvs=None, seed=None, summaries=True, monitor=False, clip_reward=True, episodic_life=True):
     """ Wraps env as in Nature DQN paper and creates parallel actors. """
     if "NoFrameskip" not in env_id:
         raise ValueError(f"env_id must have 'NoFrameskip' but is {env_id}")
@@ -345,6 +345,26 @@ def nature_dqn_env(env_id, nenvs=None, seed=None, summaries=True, monitor=False,
 
     env = OldGym(gym.make(env_id))
     env.seed(seed)
+    env.metadata['render.modes'] = ['rgb_array']
+
+    from ale_py.env import gym as ale_gym
+
+    # Patch to allow rendering Atari games.
+    # The AtariEnv's render method expects the mode to be in self._render_mode
+    # (usually initialized with env.make) instead of taking mode as a param.
+    _original_atari_render = ale_gym.AtariEnv.render
+
+
+    def atari_render(self, mode = 'rgb_array'):
+        original_render_mode = self._render_mode
+        try:
+            self._render_mode = mode
+            return _original_atari_render(self)
+        finally:
+            self._render_mode = original_render_mode
+
+    ale_gym.AtariEnv.render = atari_render
+    
     
     if summaries:
         env = TensorboardSummaries(env)
@@ -353,8 +373,8 @@ def nature_dqn_env(env_id, nenvs=None, seed=None, summaries=True, monitor=False,
         env = FireReset(env)
     env = StartWithRandomActions(env, max_random_actions=30)
     
-    # if monitor:
-    #     env = gym.wrappers.Monitor(env, directory="videos", force=True)
+    if monitor:
+        env = gym.wrappers.Monitor(env, directory="videos", video_callable=lambda episode_id: True,force=True)
     if episodic_life:
         env = EpisodicLife(env)
         
@@ -366,7 +386,5 @@ def nature_dqn_env(env_id, nenvs=None, seed=None, summaries=True, monitor=False,
     if clip_reward:
         env = ClipReward(env)
     
-    if video:
-        env = gym.wrappers.RecordVideo(env, 'videos')
     return env
 
