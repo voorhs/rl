@@ -1,6 +1,6 @@
 """ RL env runner """
 from collections import defaultdict
-
+import torch
 import numpy as np
 
 
@@ -24,6 +24,8 @@ class EnvRunner:
         """ Writes logs """
         if isinstance(val, dict):
             self.env.writer.add_scalars(name, val, self.env.step_var)
+        elif isinstance(val, torch.Tensor) and len(val.shape) > 0:
+            self.env.writer.add_histogram(name, val, self.env.step_var)
         else:
             self.env.writer.add_scalar(name, val, self.env.step_var)
 
@@ -46,7 +48,7 @@ class EnvRunner:
             if "actions" not in act:
                 raise ValueError("result of policy.act must contain 'actions' "
                                  f"but has keys {list(act.keys())}")
-            assert type(act["actions"]) is np.ndarray, "Error: actions for environment must be numpy"
+            assert isinstance(act["actions"], np.ndarray), "Error: actions for environment must be numpy"
                 
             for key, val in act.items():
                 trajectory[key].append(val)

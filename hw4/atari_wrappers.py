@@ -1,6 +1,5 @@
 """ Environment wrappers. """
 from collections import deque
-from typing import Tuple
 
 import cv2
 import numpy as np
@@ -8,7 +7,6 @@ import numpy as np
 import gym
 import gym.spaces as spaces
 from ale_py.env.gym import AtariEnv
-from gym.wrappers import Monitor
 from tensorboardX import SummaryWriter
 
 from env_batch import ParallelEnvBatch
@@ -258,7 +256,7 @@ class TensorboardSummaries(gym.Wrapper):
     def add_summaries(self):
         """ Writes summaries. """
         self.writer.add_scalar(
-            f"Episodes/total_reward",
+            "Episodes/total_reward",
             np.mean([q[-1] for q in self.reward_queues]),
             self.step_var
         )
@@ -268,18 +266,18 @@ class TensorboardSummaries(gym.Wrapper):
             self.step_var
         )
         self.writer.add_scalar(
-            f"Episodes/episode_length",
+            "Episodes/episode_length",
             np.mean(self.episode_lengths),
             self.step_var
         )
         if self.had_ended_episodes.size > 1:
             self.writer.add_scalar(
-                f"Episodes/min_reward",
+                "Episodes/min_reward",
                 min(q[-1] for q in self.reward_queues),
                 self.step_var
             )
             self.writer.add_scalar(
-                f"Episodes/max_reward",
+                "Episodes/max_reward",
                 max(q[-1] for q in self.reward_queues),
                 self.step_var
             )
@@ -323,7 +321,7 @@ class _thunk:
     def __call__(self):
         return nature_dqn_env(self.env_id, seed=self.env_seed, summaries=False, clip_reward=False, **self.kwargs)
 
-def nature_dqn_env(env_id, nenvs=None, seed=None, summaries=True, monitor=False, clip_reward=True, episodic_life=True):
+def nature_dqn_env(env_id, nenvs=None, seed=None, summaries=True, monitor=False, clip_reward=True, episodic_life=True, video=False):
     """ Wraps env as in Nature DQN paper and creates parallel actors. """
     if "NoFrameskip" not in env_id:
         raise ValueError(f"env_id must have 'NoFrameskip' but is {env_id}")
@@ -355,8 +353,8 @@ def nature_dqn_env(env_id, nenvs=None, seed=None, summaries=True, monitor=False,
         env = FireReset(env)
     env = StartWithRandomActions(env, max_random_actions=30)
     
-    if monitor:
-        env = gym.wrappers.Monitor(env, directory="videos", force=True)
+    # if monitor:
+    #     env = gym.wrappers.Monitor(env, directory="videos", force=True)
     if episodic_life:
         env = EpisodicLife(env)
         
@@ -367,5 +365,8 @@ def nature_dqn_env(env_id, nenvs=None, seed=None, summaries=True, monitor=False,
     env = ImageToPyTorch(env)
     if clip_reward:
         env = ClipReward(env)
+    
+    if video:
+        env = gym.wrappers.RecordVideo(env, 'videos')
     return env
 
